@@ -6,7 +6,7 @@ from yahoo import get_stock_price
 
 client = discord.Client()
 
-TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_NAME')
+TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
 
 STOCK_REGEX = "\\b([A-Z]{3,5})\\b"
 prog = re.compile(STOCK_REGEX)
@@ -33,7 +33,7 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.channel.name != TARGET_CHANNEL:
+    if str(message.channel.id) != TARGET_CHANNEL:
         return
     if str(message.author.id) not in whitelist_users:
         print('{} is not whitelisted'.format(message.author.name))
