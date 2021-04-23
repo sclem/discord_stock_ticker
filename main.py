@@ -11,7 +11,9 @@ TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
 STOCK_REGEX = "\\b([A-Z]{3,5})\\b"
 prog = re.compile(STOCK_REGEX)
 
-whitelist_users = os.getenv('DISCORD_USER_IDS').split(',')
+TARGET_ROLE = os.getenv('DISCORD_ROLE_ID')
+
+print('checking for role {}'.format(TARGET_ROLE))
 
 
 def get_price(ticker):
@@ -19,7 +21,8 @@ def get_price(ticker):
         market_data = get_stock_price(ticker)
         result = market_data['quoteSummary']['result'][0]
         price = result['price']['regularMarketPrice']['fmt']
-        return price
+        percent = result['price']['regularMarketChangePercent']['fmt']
+        return [price, percent]
     except:
         return None
 
@@ -35,24 +38,33 @@ async def on_message(message):
         return
     if str(message.channel.id) != TARGET_CHANNEL:
         return
-    if str(message.author.id) not in whitelist_users:
-        print('{} is not whitelisted'.format(message.author.name))
+    has_role = False
+    for role in message.author.roles:
+        if str(role.id) == TARGET_ROLE:
+            has_role = True
+            break
+    if not has_role:
+        print('{} does not have role'.format(message.author.name))
         return
 
     tickers = prog.findall(message.content)
+    # dedup
+    tickers = list(dict.fromkeys(tickers))
     data = []
     for t in tickers:
-        price = get_price(t)
-        if price:
+        ticker_data = get_price(t)
+        if ticker_data:
+            [price, percent] = ticker_data
             data.append({
                 'ticker': t,
-                'price': price
+                'price': price,
+                'percent': percent
             })
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
     for d in data:
-        out_msg += '{} is ${}\n'.format(d['ticker'], d['price'])
+        out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
