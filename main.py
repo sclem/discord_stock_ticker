@@ -24,6 +24,13 @@ def get_price(ticker):
         result = market_data['quoteSummary']['result'][0]
         price = result['price']['regularMarketPrice']['fmt']
         percent = result['price']['regularMarketChangePercent']['fmt']
+        premarketPrice = result['price']['preMarketPrice']['fmt']
+        premarketPercent = result['price']['preMarketChangePercent']['fmt']
+        marketOpen = result['price']['regularMarketOpen']['fmt']
+        dayHigh = result['price']['regularMarketDayHigh']['fmt']
+        dayLow = result['price']['regularMarketDayLow']['fmt']
+        marketVolume = result['price']['regularMarketVolume']['fmt']
+        marketCap = result['price']['marketCap']['fmt']
         return [price, percent]
     except:
         return None
@@ -63,15 +70,36 @@ async def on_message(message):
             data.append({
                 'ticker': t,
                 'price': price,
-                'percent': percent
+                'percent': percent,
+                'premarketPrice': premarketPrice,
+                'premarketPercent': premarketPercent,
+                'marketOpen': marketOpen,
+                'dayHigh': dayHigh,
+                'dayLow': dayLow,
+                'marketVolume': marketVolume,
+                'marketCap': marketCap
             })
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
+    isMarketOpen = get_market_open_status()
     for d in data:
         out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
+        if !isMarketOpen :
+            out_msg += 'Pre market Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
+        out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
+        out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
+        out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
+        out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
+        out_msg += 'Market Cap is {}\n'.format(d['marketCap'])
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
+
+def get_market_open_status():
+    [open_time, close_time] = get_market_times_utc()
+    if datetime.now() < open_time || datetime.now() > close_time:
+        return False
+    return True
 
 def get_market_times_utc():
     now = datetime.now()
