@@ -31,7 +31,7 @@ def get_price(ticker):
         dayLow = result['price']['regularMarketDayLow']['fmt']
         marketVolume = result['price']['regularMarketVolume']['fmt']
         marketCap = result['price']['marketCap']['fmt']
-        return [price, percent]
+        return [price, percent, premarketPrice, premarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
     except:
         return None
 
@@ -39,6 +39,7 @@ def get_price(ticker):
 @bot.event
 async def on_ready():
     print('we have logged in as {0.user}'.format(bot))
+
 
 @bot.event
 async def on_message(message):
@@ -66,7 +67,7 @@ async def on_message(message):
     for t in tickers:
         ticker_data = get_price(t)
         if ticker_data:
-            [price, percent] = ticker_data
+            [price, percent, premarketPrice, premarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
             data.append({
                 'ticker': t,
                 'price': price,
@@ -85,7 +86,7 @@ async def on_message(message):
     isMarketOpen = get_market_open_status()
     for d in data:
         out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
-        if !isMarketOpen :
+        if isMarketOpen == False:
             out_msg += 'Pre market Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
         out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
         out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
@@ -95,18 +96,20 @@ async def on_message(message):
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
+
 def get_market_open_status():
     [open_time, close_time] = get_market_times_utc()
-    if datetime.now() < open_time || datetime.now() > close_time:
-        return False
-    return True
+    return datetime.utcnow() > open_time and datetime.utcnow() < close_time
+
 
 def get_market_times_utc():
     now = datetime.now()
     open_time = datetime(now.year, now.month, now.day, 9, 30)
-    open_time = eastern_tz.localize(open_time, is_dst=None).astimezone(utc).replace(tzinfo=None)
+    open_time = eastern_tz.localize(
+        open_time, is_dst=None).astimezone(utc).replace(tzinfo=None)
     close_time = datetime(now.year, now.month, now.day, 16, 0)
-    close_time = eastern_tz.localize(close_time, is_dst=None).astimezone(utc).replace(tzinfo=None)
+    close_time = eastern_tz.localize(
+        close_time, is_dst=None).astimezone(utc).replace(tzinfo=None)
     return [open_time, close_time]
 
 
@@ -114,7 +117,7 @@ def get_market_times_utc():
 async def report(ctx, command):
     check_ticker = None
     if len(ctx.message.mentions) == 0:
-        check_ticker = command 
+        check_ticker = command
         if len(check_ticker) == 0:
             print('no ticker')
             return
@@ -123,7 +126,7 @@ async def report(ctx, command):
         [open_time, close_time] = get_market_times_utc()
         out_msg = ''
         if check_ticker:
-            ticker_data = get_price(check_ticker) 
+            ticker_data = get_price(check_ticker)
             if not ticker_data:
                 await ctx.send('cannot find {}'.format(check_ticker))
                 return
@@ -144,7 +147,8 @@ async def report(ctx, command):
 
             if check_ticker in ticker_map:
                 count = ticker_map[check_ticker]
-            out_msg += 'During market hours today, {} has been mentioned {} times'.format(check_ticker, count)
+            out_msg += 'During market hours today, {} has been mentioned {} times'.format(
+                check_ticker, count)
         else:
             # user report
             target_user = ctx.message.mentions[0]
@@ -160,8 +164,10 @@ async def report(ctx, command):
                         ticker_map[t] = 0
                     ticker_map[t] += 1
 
-            ticker_map_sorted = dict(sorted(ticker_map.items(), key=lambda item: item[1], reverse=True))
-            out_msg += 'During market hours today, <@{}> has mentioned:\n'.format(target_user.id)
+            ticker_map_sorted = dict(
+                sorted(ticker_map.items(), key=lambda item: item[1], reverse=True))
+            out_msg += 'During market hours today, <@{}> has mentioned:\n'.format(
+                target_user.id)
             count = 0
 
             for k, v in ticker_map_sorted.items():
