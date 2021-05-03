@@ -92,7 +92,7 @@ async def on_message(message):
         out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
         out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
         out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
-        out_msg += 'Market Cap is {}\n'.format(d['marketCap'])
+        out_msg += 'Market Cap is {}\n\n'.format(d['marketCap'])
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
