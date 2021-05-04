@@ -26,12 +26,14 @@ def get_price(ticker):
         percent = result['price']['regularMarketChangePercent']['fmt']
         premarketPrice = result['price']['preMarketPrice']['fmt']
         premarketPercent = result['price']['preMarketChangePercent']['fmt']
+        postmarketPrice = result['price']['postMarketPrice']['fmt']
+        postmarketPercent = result['price']['postMarketChange']['fmt']
         marketOpen = result['price']['regularMarketOpen']['fmt']
         dayHigh = result['price']['regularMarketDayHigh']['fmt']
         dayLow = result['price']['regularMarketDayLow']['fmt']
         marketVolume = result['price']['regularMarketVolume']['fmt']
         marketCap = result['price']['marketCap']['fmt']
-        return [price, percent, premarketPrice, premarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
+        return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
     except:
         return None
 
@@ -67,13 +69,15 @@ async def on_message(message):
     for t in tickers:
         ticker_data = get_price(t)
         if ticker_data:
-            [price, percent, premarketPrice, premarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
+            [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
             data.append({
                 'ticker': t,
                 'price': price,
                 'percent': percent,
                 'premarketPrice': premarketPrice,
                 'premarketPercent': premarketPercent,
+                'postmarketPrice': postmarketPrice,
+                'postmarketPercent': postmarketPercent,
                 'marketOpen': marketOpen,
                 'dayHigh': dayHigh,
                 'dayLow': dayLow,
@@ -83,12 +87,15 @@ async def on_message(message):
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
-    isMarketOpen = get_market_open_status()
+    market_status = get_market_status()
     for d in data:
         out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
-        if isMarketOpen == False:
-            out_msg += 'Pre market Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
-        out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
+        if market_status == "premarket":
+            out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
+        elif market_status == "postmarket":
+            out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
+        else :
+            out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
         out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
         out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
         out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
@@ -97,9 +104,15 @@ async def on_message(message):
     await message.channel.send(out_msg)
 
 
-def get_market_open_status():
+def get_market_status():
     [open_time, close_time] = get_market_times_utc()
-    return datetime.utcnow() > open_time and datetime.utcnow() < close_time
+    if datetime.utcnow() < open_time: 
+        return "premarket"
+    elif datetime.utcnow() > close_time:
+        return "postmarket"
+    else:
+         return "open"
+    # return datetime.utcnow() > open_time and datetime.utcnow() < close_time
 
 
 def get_market_times_utc():
