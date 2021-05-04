@@ -7,6 +7,9 @@ import discord
 from discord.ext import commands
 from yahoo import get_stock_price
 from crypto import get_crypto_price
+from dotenv import load_dotenv
+
+load_dotenv()
 
 COMMAND_PREFIX = '!'
 TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
