@@ -8,7 +8,7 @@ from discord.ext import commands
 from yahoo import get_stock_price
 from crypto import get_crypto_price
 
-COMMAND_PREFIX='!'
+COMMAND_PREFIX = '!'
 TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
 TARGET_ROLE = os.getenv('DISCORD_ROLE_ID')
 STOCK_REGEX = "\\b([A-Z]{3,5})\\b"
@@ -18,7 +18,6 @@ eastern_tz = timezone('America/New_York')
 
 print('checking for role {}'.format(TARGET_ROLE))
 
-isCrypto = False
 
 def get_price(ticker):
     symbol = ''
@@ -34,7 +33,6 @@ def get_price(ticker):
 
     if symbol != '':
         try:
-            isCrypto = True
             market_data = get_crypto_price(symbol)
             result = market_data['data']
             price = result['priceUsd']
@@ -42,9 +40,8 @@ def get_price(ticker):
             return [price, percentChange]
         except:
             return None
-    else :
+    else:
         try:
-            isCrypto = False
             market_data = get_stock_price(ticker)
             result = market_data['quoteSummary']['result'][0]
             price = result['price']['regularMarketPrice']['fmt']
@@ -94,7 +91,8 @@ async def on_message(message):
     for t in tickers:
         ticker_data = get_price(t)
         if ticker_data and len(ticker_data) > 2:
-            [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
+            [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent,
+                marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
             data.append({
                 'ticker': t,
                 'price': price,
@@ -120,16 +118,19 @@ async def on_message(message):
         return
     out_msg = '<@{}>\n'.format(message.author.id)
     market_status = get_market_status()
-    if isCrypto:
-        out_msg += '{} is ${} ({})\n\n'.format(d['ticker'], d['price'], d['percentChange'])
-    else:
-        for d in data:
-            out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
+
+    for d in data:
+        if len(d) == 3:
+            out_msg += '{} is ${} ({})\n\n'.format(
+                d['ticker'], d['price'], d['percentChange'])
+        else:
+            out_msg += '{} is ${} ({})\n'.format(d['ticker'],d['price'], d['percent'])
             if market_status == "premarket":
-                out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
+                out_msg += 'PreMarket Price is ${} ({})\n'.format(
+                    d['premarketPrice'], d['premarketPercent'])
             elif market_status == "postmarket":
                 out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
-            else :
+            else:
                 out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
             out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
             out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
@@ -141,12 +142,12 @@ async def on_message(message):
 
 def get_market_status():
     [open_time, close_time] = get_market_times_utc()
-    if datetime.utcnow() < open_time: 
+    if datetime.utcnow() < open_time:
         return "premarket"
     elif datetime.utcnow() > close_time:
         return "postmarket"
     else:
-         return "open"
+        return "open"
 
 
 def get_market_times_utc():

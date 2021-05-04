@@ -6,7 +6,7 @@ COINCAP = 'api.coincap.io/v2/assets/'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0',
     'accept': 'application/json',
-    'Host': '123'
+    'Connection': 'keep-alive'
 }
 
 
@@ -18,12 +18,18 @@ def get_crypto_price(ticker: str) -> dict:
 
     resp = get(
         COINCAP + f'{ticker}',
-        headers=HEADERS
+        headers=HEADERS,
+        timeout=5
     )
 
+    print('Resp: {}'.format(resp))
+
     try:
+        print('Calling resp')
         resp.raise_for_status()
-    except:
+    except e:
+        print('Exception: ')
+        print(e)
         return {}
 
     print('Response data: {}'.format(resp.json()))
