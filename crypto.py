@@ -16,7 +16,6 @@ def get_crypto_price(ticker: str) -> dict:
     resp = get(
         COINCAP + f'{ticker}',
         headers=HEADERS,
-        timeout=5
     )
 
     try:

@@ -21,7 +21,8 @@ def get_stock_price(ticker: str) -> dict:
 
     try:
         resp.raise_for_status()
-    except:
+    except e:
+        print(e)
         return {}
 
     return resp.json()

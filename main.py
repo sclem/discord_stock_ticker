@@ -48,8 +48,15 @@ def get_price(ticker):
             percent = result['price']['regularMarketChangePercent']['fmt']
             premarketPrice = result['price']['preMarketPrice']['fmt']
             premarketPercent = result['price']['preMarketChangePercent']['fmt']
-            postmarketPrice = result['price']['postMarketPrice']['fmt']
-            postmarketPercent = result['price']['postMarketChange']['fmt']
+
+            postmarketPrice = ''
+            if 'fmt' in result['price']['postMarketPrice']:
+                postmarketPrice = result['price']['postMarketPrice']['fmt']
+
+            postmarketPercent = ''
+            if 'fmt' in result['price']['postMarketChange']:
+                postmarketPercent = result['price']['postMarketChange']['fmt']
+
             marketOpen = result['price']['regularMarketOpen']['fmt']
             dayHigh = result['price']['regularMarketDayHigh']['fmt']
             dayLow = result['price']['regularMarketDayLow']['fmt']
@@ -121,13 +128,11 @@ async def on_message(message):
 
     for d in data:
         if len(d) == 3:
-            out_msg += '{} is ${} ({})\n\n'.format(
-                d['ticker'], d['price'], d['percentChange'])
+            out_msg += '{} is ${:.2f} (${:.2f})\n\n'.format(d['ticker'], float(d['price']), float(d['percentChange']))
         else:
-            out_msg += '{} is ${} ({})\n'.format(d['ticker'],d['price'], d['percent'])
+            out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
             if market_status == "premarket":
-                out_msg += 'PreMarket Price is ${} ({})\n'.format(
-                    d['premarketPrice'], d['premarketPercent'])
+                out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
             elif market_status == "postmarket":
                 out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
             else:
