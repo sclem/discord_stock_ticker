@@ -31,9 +31,6 @@ def get_price(ticker):
     elif ticker == 'DOGE':
         symbol = 'dogecoin'
 
-    print('Symbol: {}'.format(symbol))
-    print('Ticker: {}'.format(ticker))
-
     if symbol != '':
         try:
             market_data = get_crypto_price(symbol)
