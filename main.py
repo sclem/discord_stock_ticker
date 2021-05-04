@@ -128,7 +128,7 @@ async def on_message(message):
 
     for d in data:
         if len(d) == 3:
-            out_msg += '{} is ${:.2f} (${:.2f})\n\n'.format(d['ticker'], float(d['price']), float(d['percentChange']))
+            out_msg += '{} is ${:.2f} ({:.2f}%)\n\n'.format(d['ticker'], float(d['price']), float(d['percentChange']))
         else:
             out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
             if market_status == "premarket":
