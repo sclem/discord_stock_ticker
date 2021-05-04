@@ -6,6 +6,7 @@ from pytz import timezone, utc
 import discord
 from discord.ext import commands
 from yahoo import get_stock_price
+from crypto import get_crypto_price
 
 COMMAND_PREFIX='!'
 TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
@@ -17,25 +18,49 @@ eastern_tz = timezone('America/New_York')
 
 print('checking for role {}'.format(TARGET_ROLE))
 
+isCrypto = False
 
 def get_price(ticker):
-    try:
-        market_data = get_stock_price(ticker)
-        result = market_data['quoteSummary']['result'][0]
-        price = result['price']['regularMarketPrice']['fmt']
-        percent = result['price']['regularMarketChangePercent']['fmt']
-        premarketPrice = result['price']['preMarketPrice']['fmt']
-        premarketPercent = result['price']['preMarketChangePercent']['fmt']
-        postmarketPrice = result['price']['postMarketPrice']['fmt']
-        postmarketPercent = result['price']['postMarketChange']['fmt']
-        marketOpen = result['price']['regularMarketOpen']['fmt']
-        dayHigh = result['price']['regularMarketDayHigh']['fmt']
-        dayLow = result['price']['regularMarketDayLow']['fmt']
-        marketVolume = result['price']['regularMarketVolume']['fmt']
-        marketCap = result['price']['marketCap']['fmt']
-        return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
-    except:
-        return None
+    symbol = ''
+    if ticker == 'BTC':
+        symbol = 'bitcoin'
+    elif ticker == 'ETH':
+        symbol = 'ethereum'
+    elif ticker == 'DOGE':
+        symbol = 'dogecoin'
+
+    print('Symbol: {}'.format(symbol))
+    print('Ticker: {}'.format(ticker))
+
+    if symbol != '':
+        try:
+            isCrypto = True
+            market_data = get_crypto_price(symbol)
+            result = market_data['data']
+            price = result['priceUsd']
+            percentChange = result['changePercent24Hr']
+            return [price, percentChange]
+        except:
+            return None
+    else :
+        try:
+            isCrypto = False
+            market_data = get_stock_price(ticker)
+            result = market_data['quoteSummary']['result'][0]
+            price = result['price']['regularMarketPrice']['fmt']
+            percent = result['price']['regularMarketChangePercent']['fmt']
+            premarketPrice = result['price']['preMarketPrice']['fmt']
+            premarketPercent = result['price']['preMarketChangePercent']['fmt']
+            postmarketPrice = result['price']['postMarketPrice']['fmt']
+            postmarketPercent = result['price']['postMarketChange']['fmt']
+            marketOpen = result['price']['regularMarketOpen']['fmt']
+            dayHigh = result['price']['regularMarketDayHigh']['fmt']
+            dayLow = result['price']['regularMarketDayLow']['fmt']
+            marketVolume = result['price']['regularMarketVolume']['fmt']
+            marketCap = result['price']['marketCap']['fmt']
+            return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
+        except:
+            return None
 
 
 @bot.event
@@ -68,7 +93,7 @@ async def on_message(message):
     data = []
     for t in tickers:
         ticker_data = get_price(t)
-        if ticker_data:
+        if ticker_data and len(ticker_data) > 2:
             [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
             data.append({
                 'ticker': t,
@@ -84,22 +109,32 @@ async def on_message(message):
                 'marketVolume': marketVolume,
                 'marketCap': marketCap
             })
+        elif ticker_data and len(ticker_data) <= 2:
+            [price, percentChange] = ticker_data
+            data.append({
+                'ticker': t,
+                'price': price,
+                'percentChange': percentChange
+            })
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
     market_status = get_market_status()
-    for d in data:
-        out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
-        if market_status == "premarket":
-            out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
-        elif market_status == "postmarket":
-            out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
-        else :
-            out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
-        out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
-        out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
-        out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
-        out_msg += 'Market Cap is {}\n\n'.format(d['marketCap'])
+    if isCrypto:
+        out_msg += '{} is ${} ({})\n\n'.format(d['ticker'], d['price'], d['percentChange'])
+    else:
+        for d in data:
+            out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
+            if market_status == "premarket":
+                out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
+            elif market_status == "postmarket":
+                out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
+            else :
+                out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
+            out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
+            out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
+            out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
+            out_msg += 'Market Cap is {}\n\n'.format(d['marketCap'])
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
@@ -112,7 +147,6 @@ def get_market_status():
         return "postmarket"
     else:
          return "open"
-    # return datetime.utcnow() > open_time and datetime.utcnow() < close_time
 
 
 def get_market_times_utc():
