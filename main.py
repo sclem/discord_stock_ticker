@@ -24,19 +24,15 @@ print('checking for role {}'.format(TARGET_ROLE))
 
 def get_price(ticker):
     symbol = ''
-    if ticker == 'BTC':
-        symbol = 'bitcoin'
-    elif ticker == 'ETH':
-        symbol = 'ethereum'
-    elif ticker == 'DOGE':
-        symbol = 'dogecoin'
+    if ticker == 'BTC' or ticker == 'ETH' or ticker == 'DOGE':
+        symbol = ticker
 
     if symbol != '':
         try:
             market_data = get_crypto_price(symbol)
-            result = market_data['data']
-            price = result['priceUsd']
-            percentChange = result['changePercent24Hr']
+            result = market_data['data']['market_data']
+            price = result['price_usd']
+            percentChange = result['percent_change_usd_last_24_hours']
             return [price, percentChange]
         except:
             return None

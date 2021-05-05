@@ -1,7 +1,7 @@
 from logging import error
 from requests import get
 
-COINCAP = 'https://api.coincap.io/v2/assets/'
+CRYPTO_URL = 'https://data.messari.io/api/v1/assets/'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0',
     'Content-Type': 'application/json; charset=utf-8'
@@ -14,7 +14,7 @@ def get_crypto_price(ticker: str) -> dict:
     '''
 
     resp = get(
-        COINCAP + f'{ticker}',
+        CRYPTO_URL + f'{ticker}/metrics',
         headers=HEADERS,
     )
 
