@@ -8,6 +8,7 @@ from discord.ext import commands
 from yahoo import get_stock_price
 from crypto import get_crypto_price
 from dotenv import load_dotenv
+from find_tickers import find_stonks
 
 load_dotenv()
 
@@ -87,9 +88,7 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    tickers = prog.findall(message.content)
-    # dedup
-    tickers = list(dict.fromkeys(tickers))
+    tickers = find_stonks(message.content)
     data = []
     for t in tickers:
         ticker_data = get_price(t)
