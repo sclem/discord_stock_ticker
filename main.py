@@ -15,8 +15,6 @@ load_dotenv()
 COMMAND_PREFIX = '!'
 TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
 TARGET_ROLE = os.getenv('DISCORD_ROLE_ID')
-STOCK_REGEX = "\\b([A-Z]{3,5})\\b"
-prog = re.compile(STOCK_REGEX)
 bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 eastern_tz = timezone('America/New_York')
 
@@ -88,7 +86,7 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    tickers = find_stonks(message.content)
+    tickers = find_stonks(message.content, dedup=True)
     data = []
     for t in tickers:
         ticker_data = get_price(t)
@@ -169,6 +167,8 @@ async def report(ctx, command):
         if len(check_ticker) == 0:
             print('no ticker')
             return
+        elif check_ticker.startswith('$'):
+            check_ticker = check_ticker[1:]
     # scan messages for ticker ref
     async with ctx.message.channel.typing():
         [open_time, close_time] = get_market_times_utc()
@@ -187,7 +187,7 @@ async def report(ctx, command):
                 if msg.content.startswith(COMMAND_PREFIX):
                     continue
 
-                tickers = prog.findall(msg.content)
+                tickers = find_stonks(msg.content)
                 for t in tickers:
                     if not t in ticker_map:
                         ticker_map[t] = 0
@@ -206,7 +206,7 @@ async def report(ctx, command):
                     continue
                 if msg.content.startswith(COMMAND_PREFIX):
                     continue
-                tickers = prog.findall(msg.content)
+                tickers = find_stonks(msg.content)
                 for t in tickers:
                     if not t in ticker_map:
                         ticker_map[t] = 0
