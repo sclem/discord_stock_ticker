@@ -32,9 +32,9 @@ def get_price(ticker):
             result = market_data['data']['market_data']
             price = result['price_usd']
             percentChange = result['percent_change_usd_last_24_hours']
-            return [price, percentChange]
+            return [price, percentChange], True
         except:
-            return None
+            return None, False
     else:
         try:
             market_data = get_stock_price(ticker)
@@ -57,9 +57,9 @@ def get_price(ticker):
             dayLow = result['price']['regularMarketDayLow']['fmt']
             marketVolume = result['price']['regularMarketVolume']['fmt']
             marketCap = result['price']['marketCap']['fmt']
-            return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap]
+            return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap], False
         except:
-            return None
+            return None, False
 
 
 @bot.event
@@ -86,54 +86,43 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
+    market_status = get_market_status()
     tickers = find_stonks(message.content, dedup=True)
     data = []
     for t in tickers:
-        ticker_data = get_price(t)
-        if ticker_data and len(ticker_data) > 2:
-            [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent,
-                marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
-            data.append({
-                'ticker': t,
-                'price': price,
-                'percent': percent,
-                'premarketPrice': premarketPrice,
-                'premarketPercent': premarketPercent,
-                'postmarketPrice': postmarketPrice,
-                'postmarketPercent': postmarketPercent,
-                'marketOpen': marketOpen,
-                'dayHigh': dayHigh,
-                'dayLow': dayLow,
-                'marketVolume': marketVolume,
-                'marketCap': marketCap
-            })
-        elif ticker_data and len(ticker_data) <= 2:
-            [price, percentChange] = ticker_data
-            data.append({
-                'ticker': t,
-                'price': price,
-                'percentChange': percentChange
-            })
+        ticker_data, is_crypto = get_price(t)
+        if ticker_data:
+            # yahoo
+            if not is_crypto:
+                [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent,
+                    marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
+                price_data = price
+                percent_data = percent
+                if market_status == "premarket":
+                    price_data = premarketPrice
+                    percent_data = premarketPercent
+                elif market_status == "postmarket":
+                    price_data = postmarketPrice
+                    percent_data = postmarketPercent
+                data.append({
+                    'ticker': t,
+                    'price': price_data,
+                    'percent': percent_data,
+                })
+            # crypto
+            else:
+                [price, percentChange] = ticker_data
+                data.append({
+                    'ticker': t,
+                    'price': "{:.2f}".format(price),
+                    'percent': "{:.2f}".format(percentChange)
+                })
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
-    market_status = get_market_status()
 
     for d in data:
-        if len(d) == 3:
-            out_msg += '{} is ${:.2f} ({:.2f}%)\n\n'.format(d['ticker'], float(d['price']), float(d['percentChange']))
-        else:
-            out_msg += '{} is ${} ({})\n'.format(d['ticker'], d['price'], d['percent'])
-            if market_status == "premarket":
-                out_msg += 'PreMarket Price is ${} ({})\n'.format(d['premarketPrice'], d['premarketPercent'])
-            elif market_status == "postmarket":
-                out_msg += 'PostMarket Price is ${} ({})\n'.format(d['postmarketPrice'], d['postmarketPercent'])
-            else:
-                out_msg += 'Market Open is ${}\n'.format(d['marketOpen'])
-            out_msg += 'Day High is ${}\n'.format(d['dayHigh'])
-            out_msg += 'Day Low is ${}\n'.format(d['dayLow'])
-            out_msg += 'Market Volume is {}\n'.format(d['marketVolume'])
-            out_msg += 'Market Cap is {}\n\n'.format(d['marketCap'])
+        out_msg += '{} is ${} ({}%)\n'.format(d['ticker'], d['price'], d['percent'])
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
@@ -159,6 +148,43 @@ def get_market_times_utc():
     return [open_time, close_time]
 
 
+@bot.command(name='stats')
+async def stats(ctx, command):
+    check_ticker = command
+    if not check_ticker or len(check_ticker) == 0:
+        print('no ticker')
+        return
+    elif check_ticker.startswith('$'):
+        check_ticker = check_ticker[1:]
+
+    market_status = get_market_status()
+    out_msg = '{}:\n'.format(check_ticker)
+    ticker_data, is_crypto = get_price(check_ticker)
+    if not ticker_data:
+        await ctx.send('cannot find {}'.format(check_ticker))
+        return
+    # extended yahoo data
+    if not is_crypto:
+        [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent,
+            marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
+        if market_status == "premarket":
+            out_msg += 'PreMarket Price is ${} ({}%)\n'.format(premarketPrice, premarketPercent)
+        elif market_status == "postmarket":
+            out_msg += 'PostMarket Price is ${} ({}%)\n'.format(postmarketPrice, postmarketPercent)
+        else:
+            out_msg += '{} is ${} ({}%)\n'.format(check_ticker, price, percent)
+        out_msg += 'Market Open is ${}\n'.format(marketOpen)
+        out_msg += 'Day High is ${}\n'.format(dayHigh)
+        out_msg += 'Day Low is ${}\n'.format(dayLow)
+        out_msg += 'Market Volume is {}\n'.format(marketVolume)
+        out_msg += 'Market Cap is {}\n'.format(marketCap)
+    else:
+        out_msg += 'no stats for {}'.format(check_ticker)
+
+    print('sending: \n{}'.format(out_msg))
+    await ctx.send(out_msg)
+
+
 @bot.command(name='report')
 async def report(ctx, command):
     check_ticker = None
@@ -171,10 +197,11 @@ async def report(ctx, command):
             check_ticker = check_ticker[1:]
     # scan messages for ticker ref
     async with ctx.message.channel.typing():
+        market_status = get_market_status()
         [open_time, close_time] = get_market_times_utc()
         out_msg = ''
         if check_ticker:
-            ticker_data = get_price(check_ticker)
+            ticker_data, is_crypto = get_price(check_ticker)
             if not ticker_data:
                 await ctx.send('cannot find {}'.format(check_ticker))
                 return
@@ -195,7 +222,7 @@ async def report(ctx, command):
 
             if check_ticker in ticker_map:
                 count = ticker_map[check_ticker]
-            out_msg += 'During market hours today, {} has been mentioned {} times'.format(
+            out_msg += 'During market hours today, {} has been mentioned {} times\n'.format(
                 check_ticker, count)
         else:
             # user report
@@ -219,7 +246,7 @@ async def report(ctx, command):
             count = 0
 
             for k, v in ticker_map_sorted.items():
-                ticker_data = get_price(k)
+                ticker_data, is_crypto = get_price(k)
                 # make sure valid
                 if ticker_data:
                     count += 1
