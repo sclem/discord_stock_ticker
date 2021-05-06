@@ -39,22 +39,22 @@ def get_price(ticker):
         try:
             market_data = get_stock_price(ticker)
             result = market_data['quoteSummary']['result'][0]
-            price = result['price']['regularMarketPrice']['fmt']
-            percent = result['price']['regularMarketChangePercent']['fmt']
-            premarketPrice = result['price']['preMarketPrice']['fmt']
-            premarketPercent = result['price']['preMarketChangePercent']['fmt']
+            price = result['price']['regularMarketPrice']['raw']
+            percent = result['price']['regularMarketChangePercent']['raw'] * 100.0
+            premarketPrice = result['price']['preMarketPrice']['raw']
+            premarketPercent = result['price']['preMarketChangePercent']['raw'] * 100.0
 
             postmarketPrice = ''
-            if 'fmt' in result['price']['postMarketPrice']:
-                postmarketPrice = result['price']['postMarketPrice']['fmt']
+            if 'raw' in result['price']['postMarketPrice']:
+                postmarketPrice = result['price']['postMarketPrice']['raw']
 
             postmarketPercent = ''
-            if 'fmt' in result['price']['postMarketChange']:
-                postmarketPercent = result['price']['postMarketChange']['fmt']
+            if 'raw' in result['price']['postMarketChange']:
+                postmarketPercent = result['price']['postMarketChange']['raw'] * 100.0
 
-            marketOpen = result['price']['regularMarketOpen']['fmt']
-            dayHigh = result['price']['regularMarketDayHigh']['fmt']
-            dayLow = result['price']['regularMarketDayLow']['fmt']
+            marketOpen = result['price']['regularMarketOpen']['raw']
+            dayHigh = result['price']['regularMarketDayHigh']['raw']
+            dayLow = result['price']['regularMarketDayLow']['raw']
             marketVolume = result['price']['regularMarketVolume']['fmt']
             marketCap = result['price']['marketCap']['fmt']
             return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap], False
@@ -106,8 +106,8 @@ async def on_message(message):
                     percent_data = postmarketPercent
                 data.append({
                     'ticker': t,
-                    'price': price_data,
-                    'percent': percent_data,
+                    'price': "{:.2f}".format(price_data),
+                    'percent': "{:.2f}".format(percent_data),
                 })
             # crypto
             else:
@@ -158,7 +158,7 @@ async def stats(ctx, command):
         check_ticker = check_ticker[1:]
 
     market_status = get_market_status()
-    out_msg = '{}:\n'.format(check_ticker)
+    out_msg = '{} is '.format(check_ticker)
     ticker_data, is_crypto = get_price(check_ticker)
     if not ticker_data:
         await ctx.send('cannot find {}'.format(check_ticker))
@@ -168,14 +168,14 @@ async def stats(ctx, command):
         [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent,
             marketOpen, dayHigh, dayLow, marketVolume, marketCap] = ticker_data
         if market_status == "premarket":
-            out_msg += 'PreMarket Price is ${} ({}%)\n'.format(premarketPrice, premarketPercent)
+            out_msg += '${} ({:.2f}%) (premarket)\n'.format(premarketPrice, premarketPercent)
         elif market_status == "postmarket":
-            out_msg += 'PostMarket Price is ${} ({}%)\n'.format(postmarketPrice, postmarketPercent)
+            out_msg += '${} ({:.2f}%) (postmarket)\n'.format(postmarketPrice, postmarketPercent)
         else:
-            out_msg += '{} is ${} ({}%)\n'.format(check_ticker, price, percent)
-        out_msg += 'Market Open is ${}\n'.format(marketOpen)
-        out_msg += 'Day High is ${}\n'.format(dayHigh)
-        out_msg += 'Day Low is ${}\n'.format(dayLow)
+            out_msg += '${} ({:.2f}%)\n'.format(price, percent)
+        out_msg += 'Market Open is ${:.2f}\n'.format(marketOpen)
+        out_msg += 'Day High is ${:.2f}\n'.format(dayHigh)
+        out_msg += 'Day Low is ${:.2f}\n'.format(dayLow)
         out_msg += 'Market Volume is {}\n'.format(marketVolume)
         out_msg += 'Market Cap is {}\n'.format(marketCap)
     else:
