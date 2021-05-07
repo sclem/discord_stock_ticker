@@ -38,27 +38,21 @@ def get_price(ticker):
     else:
         try:
             market_data = get_stock_price(ticker)
-            result = market_data['quoteSummary']['result'][0]
-            price = result['price']['regularMarketPrice']['raw']
-            percent = result['price']['regularMarketChangePercent']['raw'] * 100.0
-            premarketPrice = result['price']['preMarketPrice']['raw']
-            premarketPercent = result['price']['preMarketChangePercent']['raw'] * 100.0
-
-            postmarketPrice = ''
-            if 'raw' in result['price']['postMarketPrice']:
-                postmarketPrice = result['price']['postMarketPrice']['raw']
-
-            postmarketPercent = ''
-            if 'raw' in result['price']['postMarketChange']:
-                postmarketPercent = result['price']['postMarketChange']['raw'] * 100.0
-
-            marketOpen = result['price']['regularMarketOpen']['raw']
-            dayHigh = result['price']['regularMarketDayHigh']['raw']
-            dayLow = result['price']['regularMarketDayLow']['raw']
-            marketVolume = result['price']['regularMarketVolume']['fmt']
-            marketCap = result['price']['marketCap']['fmt']
+            result = market_data['quoteSummary']['result'][0].get('price', {})
+            price = result.get('regularMarketPrice', {}).get('raw', 0)
+            percent = result.get('regularMarketChangePercent', {}).get('raw', 0) * 100.0
+            premarketPrice = result.get('preMarketPrice', {}).get('raw', 0)
+            premarketPercent = result.get('preMarketChangePercent', {}).get('raw', 0) * 100.0
+            postmarketPrice = result.get('postMarketPrice', {}).get('raw', 0)
+            postmarketPercent = result.get('postMarketChangePercent', {}).get('raw', 0) * 100.0
+            marketOpen = result.get('regularMarketOpen', {}).get('raw', 0)
+            dayHigh = result.get('regularMarketDayHigh', {}).get('raw', 0)
+            dayLow = result.get('regularMarketDayLow', {}).get('raw', 0)
+            marketVolume = result.get('regularMarketVolume', {}).get('fmt', '')
+            marketCap = result.get('marketCap', {}).get('fmt', '')
             return [price, percent, premarketPrice, premarketPercent, postmarketPrice, postmarketPercent, marketOpen, dayHigh, dayLow, marketVolume, marketCap], False
-        except:
+        except Exception as e:
+            print('failed to get stock price for {}, {}'.format(ticker, e))
             return None, False
 
 

@@ -2,6 +2,9 @@ from logging import error
 
 from requests import get
 
+import sys
+import json
+
 YAHOO_URL = 'https://query1.finance.yahoo.com/v10/finance/'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0',
@@ -26,3 +29,6 @@ def get_stock_price(ticker: str) -> dict:
         return {}
 
     return resp.json()
+
+if __name__ == "__main__":
+    print(json.dumps(get_stock_price(sys.argv[1])))
