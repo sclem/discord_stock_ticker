@@ -1,29 +1,39 @@
 import os
 import re
+import json
 from datetime import datetime
 from pytz import timezone, utc
 
 import discord
 from discord.ext import commands
 from yahoo import get_stock_price
-from crypto import get_crypto_price
+from crypto import get_crypto_price, list_all_crypto
 from dotenv import load_dotenv
 from find_tickers import find_stonks
 
 load_dotenv()
 
 COMMAND_PREFIX = '!'
-TARGET_CHANNEL = os.getenv('DISCORD_CHANNEL_ID')
+TARGET_CHANNELS = os.getenv('DISCORD_CHANNEL_IDS', '').split(',')
 TARGET_ROLE = os.getenv('DISCORD_ROLE_ID')
 bot = commands.Bot(command_prefix=COMMAND_PREFIX)
 eastern_tz = timezone('America/New_York')
 
 print('checking for role {}'.format(TARGET_ROLE))
 
+crypto_whitelist = {
+    'BTC': True,
+    'ETH': True,
+    'DOGE': True,
+}
+
 
 def get_price(ticker):
     symbol = ''
-    if ticker == 'BTC' or ticker == 'ETH' or ticker == 'DOGE':
+    if ticker.endswith('.X'):
+        symbol = ticker[:len(ticker)-2]
+    elif crypto_whitelist.get(ticker):
+        print(f'testing for crypto symbol: {symbol}')
         symbol = ticker
 
     if symbol != '':
@@ -39,7 +49,10 @@ def get_price(ticker):
         try:
             market_data = get_stock_price(ticker)
             result = market_data['quoteSummary']['result'][0].get('price', {})
-            price = result.get('regularMarketPrice', {}).get('raw', 0)
+            price = result.get('regularMarketPrice', {}).get('raw', None)
+            # not found, yahoo always returns
+            if price is None:
+                return None, False
             percent = result.get('regularMarketChangePercent', {}).get('raw', 0) * 100.0
             premarketPrice = result.get('preMarketPrice', {}).get('raw', 0)
             premarketPercent = result.get('preMarketChangePercent', {}).get('raw', 0) * 100.0
@@ -58,14 +71,33 @@ def get_price(ticker):
 
 @bot.event
 async def on_ready():
+    print(f'checking for channels {TARGET_CHANNELS}')
     print('we have logged in as {0.user}'.format(bot))
+    print('getting crypto tickers...')
+    global crypto_whitelist
+    parsed = False
+    if os.path.exists('crypto.cache'):
+        print('using file cache for crypto')
+        try:
+            with open('crypto.cache', 'r') as f:
+                crypto_whitelist = json.loads(f.read())
+                parsed = True
+        except Exception as e:
+            print(e)
+            crypto_whitelist = None
+    if not parsed:
+        crypto_whitelist = list_all_crypto()
+        with open('crypto.cache', 'w') as f:
+            f.write(json.dumps(crypto_whitelist))
+            print('cached crypto list')
+    print('storing {} crypto tickers'.format(len(crypto_whitelist)))
 
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
-    if str(message.channel.id) != TARGET_CHANNEL:
+    if str(message.channel.id) not in TARGET_CHANNELS:
         return
     if len(TARGET_ROLE) > 0:
         has_role = False
