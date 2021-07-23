@@ -133,7 +133,7 @@ async def on_message(message):
                     percent_data = premarketPercent
                 elif market_status == "postmarket":
                     price_data = postmarketPrice
-                    percent_data = postmarketPercent
+                    percent_data = percent + postmarketPercent
                 data.append({
                     'ticker': t,
                     'price': "{:.2f}".format(price_data),
@@ -204,7 +204,7 @@ async def stats(ctx, command):
         if market_status == "premarket":
             out_msg += '${} ({:.2f}%) (premarket)\n'.format(premarketPrice, premarketPercent)
         elif market_status == "postmarket":
-            out_msg += '${} ({:.2f}%) (postmarket)\n'.format(postmarketPrice, postmarketPercent)
+            out_msg += '${} ({:.2f}%) (postmarket)\n'.format(postmarketPrice, percent + postmarketPercent)
         else:
             out_msg += '${} ({:.2f}%)\n'.format(price, percent)
         out_msg += 'Market Open is ${:.2f}\n'.format(marketOpen)
