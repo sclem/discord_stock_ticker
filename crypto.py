@@ -28,8 +28,10 @@ def get_crypto_price(ticker: str) -> dict:
     return resp.json()
 
 def list_all_crypto():
-    limit = 200
+    limit = 100
+    max_crypto = 100
     page = 0
+    total = 0
     crypto_map = {}
     done = False
     while not done:
@@ -50,5 +52,8 @@ def list_all_crypto():
                 crypto_map[symbol] = True
         # end loop when we get back less than limit
         done = len(data_list) < limit
+        total += len(data_list)
+        if not done:
+            done = total >= max_crypto 
     
     return crypto_map

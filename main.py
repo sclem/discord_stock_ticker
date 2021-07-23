@@ -33,14 +33,18 @@ def get_price(ticker):
     if ticker.endswith('.X'):
         symbol = ticker[:len(ticker)-2]
     elif crypto_whitelist.get(ticker):
-        print(f'testing for crypto symbol: {symbol}')
         symbol = ticker
+        print(f'testing for crypto symbol: {symbol}')
+    else:
+        print(f'testing for stock symbol: {ticker}')
 
     if symbol != '':
         try:
             market_data = get_crypto_price(symbol)
             result = market_data['data']['market_data']
             price = result['price_usd']
+            if price is None:
+                raise "no crypto price data"
             percentChange = result['percent_change_usd_last_24_hours']
             return [price, percentChange], True
         except:
@@ -141,14 +145,18 @@ async def on_message(message):
                 data.append({
                     'ticker': t,
                     'price': "{:.2f}".format(price),
-                    'percent': "{:.2f}".format(percentChange)
+                    'percent': "{:.2f}".format(percentChange),
+                    'crypto': True
                 })
     if len(data) == 0:
         return
     out_msg = '<@{}>\n'.format(message.author.id)
 
     for d in data:
-        out_msg += '{} is ${} ({}%)\n'.format(d['ticker'], d['price'], d['percent'])
+        out_msg += '{} is ${} ({}%)'.format(d['ticker'], d['price'], d['percent'])
+        if d.get('crypto'):
+            out_msg += ' [crypto]'
+        out_msg += '\n'
     print('sending: \n{}'.format(out_msg))
     await message.channel.send(out_msg)
 
