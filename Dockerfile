@@ -1,5 +1,9 @@
 # set base image (host OS)
-FROM python:3.9.2
+FROM balenalib/raspberry-pi-debian-python:latest
+
+RUN install_packages gcc \
+    libc-dev \
+    && rm -rf /var/cache/apk/*
 
 # copy the content of the local directory to the working directory
 COPY . .
