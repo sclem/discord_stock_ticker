@@ -1,0 +1,13 @@
+version: '3.5'
+services:
+  stonk-bot:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: stonk_bot
+    container_name: stonk_bot
+    environment:
+      - DISCORD_CHANNEL_ID=
+      - DISCORD_ROLE_ID =
+      - DISCORD_TOKEN=
+    restart: always
