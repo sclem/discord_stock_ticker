@@ -8,6 +8,6 @@ services:
     container_name: stonk_bot
     environment:
       - DISCORD_CHANNEL_ID=
-      - DISCORD_ROLE_ID =
+      - DISCORD_ROLE_ID=
       - DISCORD_TOKEN=
     restart: always
